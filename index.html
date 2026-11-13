@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Class attendance</title>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef0ea; --surface:#fbfbf8; --ink:#23291f; --muted:#667060; --line:#cfd5c6;
+  --present:#2f7d4f; --present-bg:#dcefe2;
+  --absent:#b3402f; --absent-bg:#f6dcd6;
+  --unknown:#7a7f73; --unknown-bg:#fbfbf8;
+  --accent:#2d4a3e; --accent-ink:#fff; --focus:#d08a00;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#171b15; --surface:#20261d; --ink:#e8ece1; --muted:#9aa393; --line:#38412f;
+    --present:#6cc58c; --present-bg:#1f3a2a;
+    --absent:#f08b7a; --absent-bg:#432520;
+    --unknown:#9aa393; --unknown-bg:#20261d;
+    --accent:#a9d3bd; --accent-ink:#14201a; --focus:#f0b84a;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#171b15; --surface:#20261d; --ink:#e8ece1; --muted:#9aa393; --line:#38412f;
+  --present:#6cc58c; --present-bg:#1f3a2a; --absent:#f08b7a; --absent-bg:#432520;
+  --unknown:#9aa393; --unknown-bg:#20261d; --accent:#a9d3bd; --accent-ink:#14201a; --focus:#f0b84a;
+  color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.45}
+main{max-width:980px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:1.6rem;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 18px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:18px}
+.bar label{display:flex;flex-direction:column;font-size:.85rem;color:var(--muted);gap:3px}
+input,textarea,button{font:inherit;color:inherit}
+input[type=number],input[type=text],textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+input[type=number]{width:72px}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.btn{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 14px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.spacer{flex:1}
+.room{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.board{background:var(--accent);color:var(--accent-ink);text-align:center;border-radius:6px;padding:6px;font-size:.85rem;margin:0 auto 14px;max-width:60%}
+.grid{display:grid;gap:8px}
+.seat{display:flex;flex-direction:column;justify-content:space-between;min-height:84px;text-align:left;padding:8px;border-radius:10px;border:2px solid var(--line);background:var(--unknown-bg);min-width:0}
+.seat .pos{font-size:.7rem;color:var(--muted)}
+.seat .nm{font-weight:600;overflow-wrap:anywhere;font-size:.9rem}
+.seat .nm.empty{color:var(--muted);font-weight:400}
+.seat .st{font-size:.78rem;font-weight:700}
+.seat.present{background:var(--present-bg);border-color:var(--present)}
+.seat.present .st{color:var(--present)}
+.seat.absent{background:var(--absent-bg);border-color:var(--absent)}
+.seat.absent .st{color:var(--absent)}
+.seat.unknown .st{color:var(--unknown)}
+.seat.sel{box-shadow:0 0 0 3px var(--focus)}
+.seat .note{font-size:.7rem;color:var(--muted)}
+.cell{position:relative;display:flex;min-width:0}
+.cell .seat{flex:1;width:100%}
+.cell .pos{padding-right:26px}
+.edit{position:absolute;top:4px;right:4px;width:28px;height:28px;padding:0;line-height:1;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+.editor{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.editor h2,.summary h2{font-size:1.1rem;margin:0 0 10px}
+.field{margin-bottom:10px}
+.field>span{display:block;font-size:.85rem;color:var(--muted);margin-bottom:3px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg label{flex:1;min-width:90px}
+.seg input{position:absolute;opacity:0}
+.seg span{display:block;text-align:center;padding:8px;border:2px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600}
+.seg input:checked+span.p{background:var(--present-bg);border-color:var(--present);color:var(--present)}
+.seg input:checked+span.a{background:var(--absent-bg);border-color:var(--absent);color:var(--absent)}
+.seg input:checked+span.u{background:var(--bg);border-color:var(--unknown)}
+.seg input:focus-visible+span{outline:3px solid var(--focus);outline-offset:2px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted);margin-top:12px}
+.summary{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.counts{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.count{flex:1;min-width:110px;border-radius:10px;padding:10px;border:1px solid var(--line)}
+.count b{font-size:1.6rem;display:block;line-height:1.1}
+.count.p{background:var(--present-bg);color:var(--present)}
+.count.a{background:var(--absent-bg);color:var(--absent)}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:420px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.85rem;color:var(--muted)}
+td.s-present{color:var(--present);font-weight:700}
+td.s-absent{color:var(--absent);font-weight:700}
+td.s-unknown{color:var(--unknown);font-weight:700}
+.row-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+[hidden]{display:none!important}
+@media (max-width:560px){.seat{min-height:72px;padding:6px}.seat .nm{font-size:.8rem}.board{max-width:100%}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Class attendance</h1>
+  <p class="sub">Click a seat to cycle Present → Absent → Unknown. Use ✎ on a seat to add a name and comment.</p>
+
+  <div class="bar">
+    <label>Rows <input type="number" id="rows" min="1" max="12"></label>
+    <label>Seats per row <input type="number" id="cols" min="1" max="12"></label>
+    <span class="spacer"></span>
+    <button class="btn" id="namesBtn">Paste names</button>
+    <button class="btn" id="reset">Clear all</button>
+    <button class="btn primary" id="sumBtn">Show summary</button>
+  </div>
+
+  <section class="editor" id="importer" hidden style="margin:0 0 16px">
+    <h2>Paste your class list</h2>
+    <p class="sub" style="margin:0 0 8px">One name per line, copied from a spreadsheet, document or email. Names fill the seats row by row, starting at the top left. Leave a blank line to skip a seat.</p>
+    <textarea id="impText" rows="8" placeholder="Dana Levi&#10;Omar Haddad&#10;Noa Cohen"></textarea>
+    <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="impReset" checked> Also reset attendance and comments</label>
+    <div class="row-actions">
+      <button class="btn primary" id="impGo">Fill seats</button>
+      <button class="btn" id="impCancel">Cancel</button>
+      <span class="sub" id="impInfo" style="margin:0"></span>
+    </div>
+  </section>
+
+  <div class="room">
+    <div class="board">Front of the class</div>
+    <div class="grid" id="grid"></div>
+    <div class="legend">
+      <span>✓ Present</span><span>✕ Absent</span><span>? Unknown</span>
+    </div>
+  </div>
+
+  <section class="editor" id="editor" hidden>
+    <h2 id="edTitle">Seat</h2>
+    <div class="field"><span>Name</span><input type="text" id="edName" autocomplete="off"></div>
+    <div class="field"><span>Attendance</span>
+      <div class="seg" role="radiogroup" aria-label="Attendance">
+        <label><input type="radio" name="st" value="present"><span class="p">✓ Present</span></label>
+        <label><input type="radio" name="st" value="absent"><span class="a">✕ Absent</span></label>
+        <label><input type="radio" name="st" value="unknown"><span class="u">? Unknown</span></label>
+      </div>
+    </div>
+    <div class="field"><span>Comment</span><textarea id="edNote" rows="2"></textarea></div>
+  </section>
+
+  <section class="summary" id="summary" hidden aria-live="polite">
+    <h2>Summary</h2>
+    <div class="counts" id="counts"></div>
+    <p class="sub" style="margin:0 0 6px">People with a comment</p>
+    <div class="tw"><table>
+      <thead><tr><th>Seat</th><th>Name</th><th>Status</th><th>Comment</th></tr></thead>
+      <tbody id="rowsOut"></tbody>
+    </table></div>
+    <p style="margin:12px 0 0"><button class="btn" id="copy">Copy summary</button> <span id="copyMsg" class="sub"></span></p>
+  </section>
+</main>
+
+<script>
+(function(){
+  var KEY = 'attendance-v1';
+  var LABEL = {present:'✓ Present', absent:'✕ Absent', unknown:'? Unknown'};
+  var state = {rows:5, cols:6, seats:{}};
+  var sel = null;
+
+  try { var saved = JSON.parse(localStorage.getItem(KEY) || 'null'); if (saved && saved.seats) state = saved; } catch(e){}
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
+
+  var $ = function(id){ return document.getElementById(id); };
+  var grid=$('grid'), editor=$('editor'), edName=$('edName'), edNote=$('edNote'), summary=$('summary');
+
+  function seat(k){ return state.seats[k] || {name:'', status:'unknown', note:''}; }
+  function pos(k){ var p=k.split(','); return 'Row '+(+p[0]+1)+', seat '+(+p[1]+1); }
+
+  function drawGrid(){
+    grid.style.gridTemplateColumns = 'repeat('+state.cols+', minmax(0,1fr))';
+    grid.textContent = '';
+    for (var r=0;r<state.rows;r++) for (var c=0;c<state.cols;c++){
+      var k=r+','+c, s=seat(k);
+      var wrap=document.createElement('div'); wrap.className='cell';
+      var b=document.createElement('button');
+      b.type='button';
+      b.dataset.k=k;
+      b.className='seat '+s.status+(k===sel?' sel':'');
+      b.setAttribute('aria-label', pos(k)+', '+(s.name||'empty')+', '+s.status+'. Click to change status.');
+      var a=document.createElement('span'); a.className='pos'; a.textContent='R'+(r+1)+' · S'+(c+1);
+      var n=document.createElement('span'); n.className='nm'+(s.name?'':' empty'); n.textContent=s.name||'Empty';
+      var t=document.createElement('span'); t.className='st'; t.textContent=LABEL[s.status];
+      b.append(a,n,t);
+      if (s.note){ var m=document.createElement('span'); m.className='note'; m.textContent='💬 comment'; b.append(m); }
+      b.onclick=(function(key){ return function(){ cycle(key); }; })(k);
+      var e=document.createElement('button'); e.type='button'; e.className='edit'; e.textContent='✎';
+      e.setAttribute('aria-label','Edit name and comment, '+pos(k));
+      e.onclick=(function(key){ return function(){ select(key); }; })(k);
+      wrap.append(b,e);
+      grid.append(wrap);
+    }
+  }
+
+  var NEXT={unknown:'present', present:'absent', absent:'unknown'};
+  var ORDER={absent:0, present:1, unknown:2};
+  function commented(list){
+    return list.filter(function(x){ return x.s.note.trim(); })
+      .sort(function(a,b){ return ORDER[a.s.status]-ORDER[b.s.status]; });
+  }
+  function cycle(k){
+    var s=Object.assign({}, seat(k)); s.status=NEXT[s.status];
+    state.seats[k]=s; save();
+    if (k===sel) document.querySelectorAll('input[name=st]').forEach(function(i){ i.checked = i.value===s.status; });
+    drawGrid();
+    var again=grid.querySelector('[data-k="'+k+'"]'); if (again) again.focus();
+    if (!summary.hidden) drawSummary();
+  }
+
+  function select(k){
+    sel=k; var s=seat(k);
+    editor.hidden=false;
+    $('edTitle').textContent=pos(k);
+    edName.value=s.name; edNote.value=s.note;
+    document.querySelectorAll('input[name=st]').forEach(function(i){ i.checked = i.value===s.status; });
+    drawGrid();
+    edName.focus({preventScroll:false});
+  }
+
+  function update(field, val){
+    if (!sel) return;
+    var s=Object.assign({}, seat(sel)); s[field]=val;
+    state.seats[sel]=s; save(); drawGrid();
+    if (!summary.hidden) drawSummary();
+  }
+  edName.oninput=function(){ update('name', edName.value); };
+  edNote.oninput=function(){ update('note', edNote.value); };
+  document.querySelectorAll('input[name=st]').forEach(function(i){ i.onchange=function(){ update('status', i.value); }; });
+
+  function used(){
+    var list=[];
+    for (var r=0;r<state.rows;r++) for (var c=0;c<state.cols;c++){
+      var k=r+','+c, s=seat(k);
+      if (s.name.trim() || s.note.trim() || s.status!=='unknown') list.push({k:k, s:s});
+    }
+    return list;
+  }
+
+  function drawSummary(){
+    var list=used(), n={present:0,absent:0,unknown:0};
+    list.forEach(function(x){ n[x.s.status]++; });
+    var empty = state.rows*state.cols - list.length;
+    $('counts').innerHTML='';
+    [['p',n.present,'Present'],['a',n.absent,'Absent'],['',n.unknown,'Unknown'],['',empty,'Empty seats']].forEach(function(c){
+      var d=document.createElement('div'); d.className='count '+c[0];
+      var b=document.createElement('b'); b.textContent=c[1];
+      d.append(b, c[2]); $('counts').append(d);
+    });
+    var tb=$('rowsOut'); tb.textContent='';
+    var noted=commented(list);
+    if (!noted.length){
+      var tr=document.createElement('tr'), td=document.createElement('td');
+      td.colSpan=4; td.textContent='No comments yet. Use ✎ on a seat to add one.'; tr.append(td); tb.append(tr); return;
+    }
+    noted.forEach(function(x){
+      var tr=document.createElement('tr');
+      [pos(x.k), x.s.name||'(no name)', LABEL[x.s.status], x.s.note||'—'].forEach(function(t,i){
+        var td=document.createElement('td'); td.textContent=t;
+        if (i===2) td.className='s-'+x.s.status; tr.append(td);
+      });
+      tb.append(tr);
+    });
+  }
+
+  $('sumBtn').onclick=function(){
+    summary.hidden=false; drawSummary(); summary.scrollIntoView({behavior:'smooth', block:'start'});
+  };
+
+  $('copy').onclick=function(){
+    var list=used(), n={present:0,absent:0,unknown:0};
+    list.forEach(function(x){ n[x.s.status]++; });
+    var txt='Present: '+n.present+'\nAbsent: '+n.absent+'\nUnknown: '+n.unknown+'\n\n'+
+      commented(list).map(function(x){ return (x.s.name||'(no name)')+' ('+pos(x.k)+') – '+x.s.status+': '+x.s.note; }).join('\n');
+    var msg=$('copyMsg');
+    try { navigator.clipboard.writeText(txt).then(function(){ msg.textContent='Copied.'; }, function(){ msg.textContent='Copy isn’t available here.'; }); }
+    catch(e){ msg.textContent='Copy isn’t available here.'; }
+  };
+
+  var imp=$('importer'), impText=$('impText'), impInfo=$('impInfo');
+  function parseNames(){
+    var lines=impText.value.split(/\r?\n/).map(function(l){ return l.trim(); });
+    while (lines.length && !lines[lines.length-1]) lines.pop();
+    return lines;
+  }
+  function countNames(){
+    var n=parseNames().filter(Boolean).length;
+    impInfo.textContent=n+' name'+(n===1?'':'s')+' entered, '+(state.rows*state.cols)+' seats now (rows are added if needed)';
+  }
+  $('namesBtn').onclick=function(){
+    if (!imp.hidden){ imp.hidden=true; return; }
+    var names=[];
+    for (var r=0;r<state.rows;r++) for (var c=0;c<state.cols;c++) names.push(seat(r+','+c).name);
+    while (names.length && !names[names.length-1].trim()) names.pop();
+    impText.value=names.join('\n');
+    imp.hidden=false; countNames(); impText.focus();
+    imp.scrollIntoView({behavior:'smooth', block:'nearest'});
+  };
+  impText.oninput=countNames;
+  $('impCancel').onclick=function(){ imp.hidden=true; };
+  $('impGo').onclick=function(){
+    var lines=parseNames();
+    var need=Math.ceil(lines.length/state.cols);
+    if (need>state.rows){ state.rows=Math.min(12,need); $('rows').value=state.rows; }
+    var cap=state.rows*state.cols, fresh=$('impReset').checked, next={};
+    for (var i=0;i<cap;i++){
+      var k=Math.floor(i/state.cols)+','+(i%state.cols), old=seat(k);
+      next[k]={name:lines[i]||'', status:fresh?'unknown':old.status, note:fresh?'':old.note};
+    }
+    state.seats=next; sel=null; editor.hidden=true; save(); drawGrid();
+    if (!summary.hidden) drawSummary();
+    if (lines.length>cap){ impInfo.textContent='Only the first '+cap+' names fit (12 rows is the maximum). Increase seats per row to fit the rest.'; }
+    else imp.hidden=true;
+  };
+
+  function resize(){
+    var r=Math.min(12,Math.max(1,parseInt($('rows').value)||1)), c=Math.min(12,Math.max(1,parseInt($('cols').value)||1));
+    state.rows=r; state.cols=c; $('rows').value=r; $('cols').value=c;
+    if (sel){ var p=sel.split(','); if (+p[0]>=r || +p[1]>=c){ sel=null; editor.hidden=true; } }
+    save(); drawGrid(); if (!summary.hidden) drawSummary();
+  }
+  $('rows').onchange=resize; $('cols').onchange=resize;
+
+  $('reset').onclick=function(){
+    if (!confirm('Clear every name, status and comment?')) return;
+    state.seats={}; sel=null; editor.hidden=true; save(); drawGrid(); if (!summary.hidden) drawSummary();
+  };
+
+  $('rows').value=state.rows; $('cols').value=state.cols;
+  drawGrid();
+})();
+</script>
+</body>
+</html>
